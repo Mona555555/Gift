@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karácsonyi Ajándék Játék</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: radial-gradient(ellipse at top, #0d3320 0%, #06180e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px 50px;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .snowflake {
+            position: fixed;
+            top: -20px;
+            color: rgba(255,255,255,0.6);
+            pointer-events: none;
+            animation: fall linear infinite;
+            z-index: 0;
+            user-select: none;
+        }
+        @keyframes fall {
+            to { top: 110vh; transform: translateX(30px) rotate(360deg); }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+            z-index: 1;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 1.75em;
+            color: #FFD700;
+            text-shadow: 0 0 30px rgba(255,215,0,0.4);
+            margin-bottom: 8px;
+            line-height: 1.35;
+        }
+
+        .tagline {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #FFD700;
+            letter-spacing: 1px;
+        }
+
+        #instruction {
+            text-align: center;
+            color: #b8e8b8;
+            max-width: 580px;
+            line-height: 1.6;
+            margin: 10px auto 14px;
+            font-size: 1em;
+            z-index: 1;
+            position: relative;
+            padding: 0 10px;
+            min-height: 1.6em;
+        }
+
+        #round-indicator {
+            font-size: 0.9em;
+            color: #90EE90;
+            background: rgba(255,255,255,0.08);
+            padding: 5px 18px;
+            border-radius: 20px;
+            margin-bottom: 22px;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* ===== GAME AREA ===== */
+        #game-area {
+            display: flex;
+            gap: 22px;
+            justify-content: center;
+            flex-wrap: wrap;
+            z-index: 1;
+            position: relative;
+            min-height: 310px;
+            align-items: flex-end;
+        }
+
+        /* ===== DOOR ===== */
+        .door-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .door-frame-outer {
+            background: linear-gradient(160deg, #3d1c06, #1e0d03);
+            border-radius: 9px 9px 0 0;
+            padding: 5px 5px 0;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        }
+
+        .door-scene {
+            width: 155px;
+            height: 255px;
+            perspective: 1100px;
+            position: relative;
+        }
+
+        .door-bg {
+            position: absolute;
+            inset: 0;
+            background: #f0ece4;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .door-bg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .door-panel {
+            position: absolute;
+            inset: 0;
+            transform-origin: left center;
+            transition: transform 0.95s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            z-index: 2;
+            border-radius: 4px;
+        }
+
+        .door-panel:hover .door-face {
+            filter: brightness(1.15);
+        }
+
+        .door-panel.open {
+            transform: rotateY(-152deg);
+        }
+
+        .door-panel.no-click {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .door-face {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(160deg, #9b5523 0%, #7a3e16 45%, #5c2e0d 100%);
+            border: 2px solid #3d1c06;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset -10px 0 25px rgba(0,0,0,0.35), inset 4px 0 10px rgba(255,255,255,0.05);
+            transition: filter 0.2s;
+        }
+
+        .door-num {
+            font-size: 3.8em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+            line-height: 1;
+        }
+
+        .door-star { font-size: 1.4em; color: #FFD700; margin: 6px 0; }
+
+        .door-knob {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 35% 35%, #ffe566, #b8860b, #7a5a0a);
+            border-radius: 50%;
+            margin-top: 14px;
+            box-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+        }
+
+        .door-base {
+            width: 100%;
+            height: 18px;
+            background: linear-gradient(to bottom, #2a0e02, #1a0900);
+            border-radius: 0 0 6px 6px;
+        }
+
+        /* ===== END-GAME PRIZE ===== */
+        #prize-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            z-index: 1;
+            position: relative;
+        }
+        #prize-container.active {
+            display: flex;
+            animation: bounceIn 0.7s ease;
+        }
+        @keyframes bounceIn {
+            0%   { transform: scale(0.3); opacity: 0; }
+            55%  { transform: scale(1.08); }
+            80%  { transform: scale(0.96); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #prize-img {
+            max-width: 360px;
+            max-height: 360px;
+            border-radius: 16px;
+            border: 4px solid #FFD700;
+            box-shadow: 0 0 50px rgba(255,215,0,0.35);
+        }
+        #prize-label {
+            font-size: 1.9em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.6);
+            text-align: center;
+        }
+
+        /* ===== ALL OVERLAYS ===== */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.78);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            backdrop-filter: blur(5px);
+        }
+        .overlay.show { display: flex; }
+
+        /* ===== REVEAL OVERLAY (zoomed prize) ===== */
+        #overlay-reveal {
+            flex-direction: column;
+            background: rgba(0,0,0,0.92);
+            backdrop-filter: blur(12px);
+            z-index: 300;
+        }
+
+        .reveal-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+            padding: 24px 20px;
+            text-align: center;
+            animation: revealPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 92vw;
+        }
+
+        @keyframes revealPop {
+            from { transform: scale(0.15); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+
+        #reveal-img {
+            max-width: min(78vw, 440px);
+            max-height: min(54vh, 440px);
+            border-radius: 18px;
+            border: 5px solid #FFD700;
+            box-shadow: 0 0 80px rgba(255,215,0,0.55), 0 20px 60px rgba(0,0,0,0.85);
+            object-fit: contain;
+            background: #fff;
+            display: block;
+        }
+
+        .reveal-title {
+            font-size: 1.75em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 22px rgba(255,215,0,0.65);
+        }
+
+        .btn-reveal {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #b8860b, #7a5a0a);
+            color: #fff;
+            border: 2px solid #FFD700;
+            border-radius: 12px;
+            font-size: 1.05em;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            letter-spacing: 0.3px;
+            transition: all 0.15s ease;
+        }
+        .btn-reveal:hover  { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.4); filter: brightness(1.15); }
+        .btn-reveal:active { transform: translateY(0); }
+
+        /* ===== REGULAR POPUPS ===== */
+        .popup {
+            background: linear-gradient(145deg, #0c3020, #18583a);
+            border: 3px solid #FFD700;
+            border-radius: 20px;
+            padding: 38px 44px;
+            text-align: center;
+            max-width: 440px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(255,215,0,0.12);
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.65); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+        .popup-title {
+            color: #FFD700;
+            font-size: 1.7em;
+            margin-bottom: 14px;
+            text-shadow: 0 0 12px rgba(255,215,0,0.4);
+        }
+        .popup-text {
+            font-size: 1.12em;
+            line-height: 1.65;
+            color: #d8f0d8;
+            margin-bottom: 28px;
+        }
+        .btn-row {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 36px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05em;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            transition: all 0.15s ease;
+            letter-spacing: 0.4px;
+        }
+        .btn:hover  { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.35); }
+        .btn:active { transform: translateY(0); }
+        .btn-yes { background: linear-gradient(135deg, #2e8b4e, #1a5e30); color: #fff; border: 2px solid #3cb371; }
+        .btn-no  { background: linear-gradient(135deg, #c0392b, #8b2222); color: #fff; border: 2px solid #e74c3c; }
+        /* ===== TREASURE SCREEN ===== */
+        #treasure-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+            z-index: 1;
+            position: relative;
+            text-align: center;
+            animation: bounceIn 0.7s ease;
+        }
+        #treasure-screen.active { display: flex; }
+
+        .chest-emoji {
+            font-size: 7em;
+            animation: chestPulse 1.2s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 20px rgba(255,215,0,0.7));
+            cursor: default;
+            user-select: none;
+        }
+        @keyframes chestPulse {
+            from { transform: scale(1) rotate(-4deg); }
+            to   { transform: scale(1.12) rotate(4deg); }
+        }
+
+        .btn-treasure {
+            padding: 18px 34px;
+            background: linear-gradient(135deg, #b8860b, #7a5a0a);
+            color: #fff;
+            border: 3px solid #FFD700;
+            border-radius: 14px;
+            font-size: 1.2em;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: inherit;
+            line-height: 1.55;
+            box-shadow: 0 0 30px rgba(255,215,0,0.35);
+            transition: all 0.15s ease;
+        }
+        .btn-treasure:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 55px rgba(255,215,0,0.65);
+        }
+        .btn-treasure:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🎄 Bár a karácsony még nem jött el,<br>de szerencsére az ajándékok igen! 🎄</h1>
+    <div class="tagline">Válassz okosan!</div>
+</header>
+
+<p id="instruction"></p>
+<div id="round-indicator">1. kör — 2 ajtó</div>
+
+<div id="game-area"></div>
+
+<div id="prize-container">
+    <div id="prize-label">🎁 Ez a te nyeményed! 🎁</div>
+    <img id="prize-img" src="" alt="Nyeremény">
+</div>
+
+<div id="treasure-screen">
+    <div class="chest-emoji">💰</div>
+    <button class="btn-treasure" onclick="showFinalPrize()">
+        Kíváncsi vagy a végső nyereményre?<br>Rámersz kattintani?
+    </button>
+</div>
+
+<!-- INTRO — what.png megjelenítése induláskor -->
+<div class="overlay show" id="overlay-intro">
+    <div class="reveal-card">
+        <img src="what.png" alt="Intro" style="max-width:min(80vw,480px);max-height:min(70vh,480px);border-radius:18px;border:5px solid #FFD700;box-shadow:0 0 80px rgba(255,215,0,0.55),0 20px 60px rgba(0,0,0,0.85);object-fit:contain;background:#fff;">
+        <button class="btn-reveal" onclick="document.getElementById('overlay-intro').classList.remove('show'); startRound(1);">Játék indítása 🎄</button>
+    </div>
+</div>
+
+<!-- REVEAL OVERLAY — kinagyított nyeremény + "mi volt a többi mögött?" gomb -->
+<div class="overlay" id="overlay-reveal">
+    <div class="reveal-card">
+        <div class="reveal-title">🎉 Ez volt a te ajtód mögött!</div>
+        <img id="reveal-img" src="" alt="Nyeremény">
+        <button class="btn-reveal" onclick="onRevealOthers()">Vajon mi lehetett a többi ajtó mögött? 👀</button>
+    </div>
+</div>
+
+<!-- Tovább játszani? -->
+<div class="overlay" id="popup-continue">
+    <div class="popup">
+        <div class="popup-title">🎁 Játék</div>
+        <p class="popup-text">Tovább szeretne-e játszani?</p>
+        <div class="btn-row">
+            <button class="btn btn-yes" onclick="onContinueYes()">Igen</button>
+            <button class="btn btn-no"  onclick="onContinueNo()">Nem</button>
+        </div>
+    </div>
+</div>
+
+<!-- Biztos abbahagyod? -->
+<div class="overlay" id="popup-quit">
+    <div class="popup">
+        <div class="popup-title">🤔</div>
+        <p class="popup-text">Köszönjük, hogy velünk játszottál,<br>biztos abbahagyod?</p>
+        <div class="btn-row">
+            <button class="btn btn-no"  onclick="onQuitNo()">Nem</button>
+            <button class="btn btn-yes" onclick="onQuitYes()">Igen</button>
+        </div>
+    </div>
+</div>
+
+<!-- BIZTOS?? -->
+<div class="overlay" id="popup-final-quit">
+    <div class="popup">
+        <div class="popup-title" style="font-size:3em; letter-spacing:2px;">BIZTOS??</div>
+        <p class="popup-text"></p>
+        <div class="btn-row">
+            <button class="btn btn-yes" onclick="onFinalQuitYes()">Igen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============ STATE ============
+    let state = {
+        round: 1,
+        totalDoors: 0,
+        chosenDoor: null,
+        doorImages: {}   // door num → image src assigned to that door
+    };
+
+    // VH felirat mint SVG data URI
+    const VH_IMG = 'data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 155 255">' +
+        '<rect fill="#1a1a1a" width="155" height="255"/>' +
+        '<text x="50%" y="50%" font-size="92" font-weight="bold" text-anchor="middle" ' +
+        'dominant-baseline="middle" fill="#FFD700" font-family="Georgia,serif">VH</text>' +
+        '</svg>'
+    );
+
+    // Round config: rounds 1-2 rigged (chosen door always shows chosenImg);
+    // round 3 fair (allImgs randomly distributed, chosen door shows its real content)
+    const ROUND_CONFIG = {
+        1: { total: 2, label: '1. kör — 2 ajtó',
+             chosenImg: 'pizza.jpg',    otherImgs: ['hm.jpg'],
+             instruction: 'Két ajtó közül választhatsz! Az egyik mögött lehet, hogy kedvenc magyar celebünk lapul, a másik mögött valami, aminek kevésbé örülsz, de elfogadnád.' },
+        2: { total: 3, label: '2. kör — 3 ajtó',
+             chosenImg: 'turorudi.png', otherImgs: ['hm.jpg', 'fejek.png'],
+             instruction: 'Most 3 ajtó közül választhatsz! Vajon melyik mögött lapul a csoda?' },
+        3: { total: 4, label: '3. kör — 4 ajtó',
+             chosenImg: 'king.jpg',    otherImgs: ['hm.jpg', 'fejek.png', VH_IMG, 'anett.jpg'],
+             instruction: '4 ajtó vár rád! Válassz bölcsen!' },
+        4: { total: 5, label: '4. kör — 5 ajtó',
+             chosenImg: 'sid.jpg',     otherImgs: ['hm.jpg', 'fejek.png', 'anett.jpg', VH_IMG],
+             instruction: '5 ajtó közül kell választanod — ez az utolsó kör!' }
+    };
+
+    // ============ HELPERS ============
+    function showOverlay(id) { document.getElementById(id).classList.add('show'); }
+    function hideOverlay(id) { document.getElementById(id).classList.remove('show'); }
+
+    function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    function clearGame() {
+        document.getElementById('game-area').innerHTML = '';
+        document.getElementById('prize-container').classList.remove('active');
+    }
+
+    function setInstruction(txt) { document.getElementById('instruction').textContent = txt; }
+    function setRoundLabel(txt)  { document.getElementById('round-indicator').textContent = txt; }
+
+    // ============ DOOR FACTORY ============
+    function makeDoor(num, onClickFn) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'door-wrapper';
+
+        const frameOuter = document.createElement('div');
+        frameOuter.className = 'door-frame-outer';
+
+        const scene = document.createElement('div');
+        scene.className = 'door-scene';
+        scene.id = 'scene-' + num;
+
+        // Image behind door (set dynamically on click)
+        const bg = document.createElement('div');
+        bg.className = 'door-bg';
+        const img = document.createElement('img');
+        img.src = '';
+        img.alt = 'Ajándék';
+        img.id = 'img-' + num;
+        bg.appendChild(img);
+
+        // Wooden door panel
+        const panel = document.createElement('div');
+        panel.className = 'door-panel';
+        panel.id = 'panel-' + num;
+        panel.innerHTML = `
+            <div class="door-face">
+                <div class="door-num">${num}</div>
+                <div class="door-star">⭐</div>
+                <div class="door-knob"></div>
+            </div>`;
+
+        panel.addEventListener('click', function handler() {
+            panel.removeEventListener('click', handler);
+            onClickFn(num);
+        });
+
+        scene.appendChild(bg);
+        scene.appendChild(panel);
+        frameOuter.appendChild(scene);
+
+        const base = document.createElement('div');
+        base.className = 'door-base';
+        frameOuter.appendChild(base);
+        wrapper.appendChild(frameOuter);
+        return wrapper;
+    }
+
+    function openDoor(num) {
+        const p = document.getElementById('panel-' + num);
+        if (p) p.classList.add('open');
+    }
+
+    function setDoorImg(num, src) {
+        const img = document.getElementById('img-' + num);
+        if (img) img.src = src;
+    }
+
+    function lockAllDoors() {
+        for (let i = 1; i <= state.totalDoors; i++) {
+            const p = document.getElementById('panel-' + i);
+            if (p) { p.classList.add('no-click'); p.style.pointerEvents = 'none'; }
+        }
+    }
+
+    // ============ DOOR CLICK ============
+    function handleDoorClick(doorNum) {
+        const cfg = ROUND_CONFIG[state.round];
+        state.chosenDoor = doorNum;
+
+        // Ha az otherImgs annyi mint az összes ajtó, mindegyik kap egyet véletlenszerűen,
+        // majd a kattintott felülíródik chosenImg-re (csalt)
+        const otherPool = shuffle([...cfg.otherImgs]);
+        if (cfg.otherImgs.length === state.totalDoors) {
+            for (let i = 1; i <= state.totalDoors; i++) {
+                state.doorImages[i] = otherPool[i - 1];
+                setDoorImg(i, otherPool[i - 1]);
+            }
+        } else {
+            let oi = 0;
+            for (let i = 1; i <= state.totalDoors; i++) {
+                const imgSrc = (i === doorNum) ? cfg.chosenImg : otherPool[oi++];
+                state.doorImages[i] = imgSrc;
+                setDoorImg(i, imgSrc);
+            }
+        }
+        // Kattintott ajtó mindig a chosenImg-t mutatja (csalt)
+        state.doorImages[doorNum] = cfg.chosenImg;
+        setDoorImg(doorNum, cfg.chosenImg);
+
+        lockAllDoors();
+        openDoor(doorNum);
+
+        // After door swings open → show zoomed reveal overlay
+        setTimeout(() => {
+            document.getElementById('reveal-img').src = state.doorImages[doorNum];
+            showOverlay('overlay-reveal');
+        }, 1050);
+    }
+
+    // ============ "VAJON MI VOLT A TÖBBI MÖGÖTT?" ============
+    function onRevealOthers() {
+        hideOverlay('overlay-reveal');
+
+        // Hide the already-open chosen door so the others are visible clearly
+        const chosenScene = document.getElementById('scene-' + state.chosenDoor);
+        if (chosenScene) {
+            const wrapper = chosenScene.closest('.door-wrapper');
+            if (wrapper) wrapper.style.display = 'none';
+        }
+
+        // Open remaining doors with a staggered delay
+        let delay = 0;
+        for (let i = 1; i <= state.totalDoors; i++) {
+            if (i !== state.chosenDoor) {
+                const d = i;
+                setTimeout(() => openDoor(d), delay);
+                delay += 450;
+            }
+        }
+
+        // After all doors open → continue or treasure screen
+        const afterAll = delay + 1000;
+        setTimeout(() => {
+            if (state.round < 4) {
+                showOverlay('popup-continue');
+            } else {
+                showTreasure();
+            }
+        }, afterAll);
+    }
+
+    // ============ ROUND SETUP ============
+    function startRound(round) {
+        const cfg = ROUND_CONFIG[round];
+        state.round = round;
+        state.totalDoors = cfg.total;
+        state.chosenDoor = null;
+        state.doorImages = {};
+
+        clearGame();
+        setInstruction(cfg.instruction);
+        setRoundLabel(cfg.label);
+
+        const area = document.getElementById('game-area');
+        for (let i = 1; i <= cfg.total; i++) {
+            area.appendChild(makeDoor(i, handleDoorClick));
+        }
+    }
+
+    // ============ TREASURE SCREEN ============
+    function showTreasure() {
+        clearGame();
+        setInstruction('');
+        setRoundLabel('🎄 Végső nyeremény 🎄');
+        document.getElementById('treasure-screen').classList.add('active');
+    }
+
+    function showFinalPrize() {
+        document.getElementById('treasure-screen').classList.remove('active');
+        showEndGame('pl.png', '🎉 Ez a végső nyereményed! 🎉');
+    }
+
+    // ============ END GAME ============
+    function showEndGame(imgSrc, label) {
+        clearGame();
+        setInstruction('');
+        setRoundLabel('Játék vége! 🎄');
+        document.getElementById('prize-img').src = imgSrc;
+        document.getElementById('prize-label').textContent = label;
+        document.getElementById('prize-container').classList.add('active');
+    }
+
+    // ============ POPUP HANDLERS ============
+    function onContinueYes() {
+        hideOverlay('popup-continue');
+        startRound(state.round + 1);
+    }
+
+    function onContinueNo() {
+        hideOverlay('popup-continue');
+        showOverlay('popup-quit');
+    }
+
+    function onQuitYes() {
+        hideOverlay('popup-quit');
+        showOverlay('popup-final-quit');
+    }
+
+    function onQuitNo() {
+        hideOverlay('popup-quit');
+        startRound(3); // visszamegy → 4 ajtós kör
+    }
+
+    function onFinalQuitYes() {
+        hideOverlay('popup-final-quit');
+        showEndGame('pizza.jpg', '🍕 Ez a te nyeményed! 🍕');
+    }
+
+    // ============ SNOWFLAKES ============
+    (function() {
+        const chars = ['❄','❅','❆','✦','*'];
+        for (let i = 0; i < 22; i++) {
+            const el = document.createElement('div');
+            el.className = 'snowflake';
+            el.textContent = chars[Math.floor(Math.random() * chars.length)];
+            el.style.cssText = [
+                `left:${Math.random()*100}vw`,
+                `font-size:${0.7+Math.random()*1.4}em`,
+                `animation-duration:${6+Math.random()*12}s`,
+                `animation-delay:${Math.random()*12}s`,
+                `opacity:${0.2+Math.random()*0.5}`
+            ].join(';');
+            document.body.appendChild(el);
+        }
+    })();
+
+    // ============ START ============
+    // (játék az intro overlay gombjáról indul)
+</script>
+</body>
+</html>
