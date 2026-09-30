@@ -358,9 +358,12 @@
             display: none;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 28px;
-            z-index: 1;
-            position: relative;
+            z-index: 150;
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at top, #0d3320 0%, #06180e 100%);
             text-align: center;
             animation: bounceIn 0.7s ease;
         }
